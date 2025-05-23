@@ -16,16 +16,16 @@ use App\Http\Controllers\HomePageController;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Route::get('/', function () {
+//     return view('welcome');
+// });
 
 
 
 
 Route::get('uploadform', [DocumentController::class, 'uploadForm'])->name('documents.form');
 Route::post('upload', [DocumentController::class, 'upload'])->name('documents.upload');
-Route::get('documents', [DocumentController::class, 'list'])->name('documents.list');
+Route::get('/', [DocumentController::class, 'list'])->name('documents.list');
 Route::get('/documents/search', [DocumentController::class, 'search'])->name('documents.search');
 Route::get('/documents/statistics', [DocumentController::class, 'statistics'])->name('documents.statistics');
 Route::get('/documents/download/{id}', [DocumentController::class, 'download'])->name('documents.download');
