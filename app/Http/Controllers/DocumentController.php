@@ -12,20 +12,86 @@ use App\Models\OperationTime;
 use PhpOffice\PhpWord\IOFactory;
 
 class DocumentController extends Controller{
+
+
+public function uploadForm()
+    {
+        return view('Document.upload');
+    }
+
+
+
+public function upload(Request $request){
+        $request->validate([
+            'file' => 'required|mimes:pdf,docx|max:20480',
+            
+        ]);
+        $startTime = microtime(true);
+
+        $file = $request->file('file');
+        $path = $file->store('documents');
+    //new code with docx && pdf
+    $extension = $file->getClientOriginalExtension();
+    $text = '';
+
+    if ($extension === 'pdf') {
+        $parser = new Parser();
+        $pdf = $parser->parseFile(storage_path("app/{$path}"));
+        $text = $pdf->getText();
+        try {
+            $parser = new Parser();
+            $pdf = $parser->parseFile(storage_path("app/{$path}"));
+            $text = $pdf->getText();
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['file' => 'حدث خطأ أثناء قراءة ملف PDF: ' . $e->getMessage()]);
+        }
+    } elseif ($extension === 'docx') {
+        try {
+            $phpWord = IOFactory::load(storage_path("app/{$path}"));
+            $text = '';
+            foreach ($phpWord->getSections() as $section) {
+                foreach ($section->getElements() as $element) {
+                    if (method_exists($element, 'getText')) {
+                        $text .= $element->getText() . "\n";
+                    }
+                }
+            }
+            if (empty($text)) {
+                return redirect()->back()->withErrors(['file' => 'لم يتم العثور على نص في ملف Word']);
+            }
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['file' => 'حدث خطأ أثناء قراءة ملف Word: ' . $e->getMessage()]);
+        }}
+    if (empty($text)) {
+        return redirect()->back()->withErrors(['file' => 'تعذر استخراج النص من الملف.']);
+    }
+        //للتصنيف
+        $category = $this->detectCategory($text); 
+        // استخراج العنوان ( أول سطر)
+        $lines = preg_split("/\r\n|\n|\r/", trim($text));
+        $title = $lines[0] ?? 'unknown';
+
+        // حفظ في قاعدة البيانات
+        $doc= Document::query()->create([
+            'title'=>$title,
+            'content' => $text,
+            'file_path' => $path,
+            'size' => $file->getSize(),
+            'category'=>$category
+        ]);
+        $endTime = microtime(true);
+        $searchTime = round($endTime - $startTime, 4); // per sce
+
+    OperationTime::create([
+        'operation' => 'classify',
+        'time' => $searchTime,
+    ]);
+        return redirect()->back()->with('success', 'تم رفع الملف وتحليله بنجاح');
+    }
+
     
 
-// public function index(Request $request){
-//     $sortOrder = $request->get('sort', 'asc'); // 'asc' هو الوضع الافتراضي
-//     $documents = Document::orderBy('title', $sortOrder)->get();
-
-//     return view('Document.index', compact('documents', 'sortOrder'));
-//     }
-    
-
-
-
-public function download($id)
-{
+public function download($id){
     try {
         $document = Document::findOrFail($id);
         
@@ -39,40 +105,14 @@ public function download($id)
     }
 }
 
-    // public function search(Request $request)
-    // {
-    //     $keyword = $request->input('q');
-    //     $sortOrder = $request->input('sortOrder', 'asc'); // القيمة الافتراضية "تصاعدي"
-    
-    //     $documents = Document::whereRaw("MATCH(title, content) AGAINST (? IN NATURAL LANGUAGE MODE)", [$keyword])
-    //                   ->orderBy('title', $sortOrder)
-    //                   ->get();
-    
-    //     return view('document.search_results', compact('documents', 'keyword', 'sortOrder'));
-    // }
 
-
-
-//     public function search(Request $request)
-// {
-//     $keyword = $request->input('q');
-
-//     $documents = Document::where('content', 'LIKE', '%' . $keyword . '%')
-//         ->orderBy('title', 'asc')
-//         ->get();
-
-//     return view('document.search_results', compact('documents', 'keyword'));
-// }
-
-
-//
 public function search(Request $request){
+
     $startTime = microtime(true);
 
     $keyword = $request->input('q');
     $words = array_filter(explode(' ', $keyword), fn($word) => trim($word) !== '');
 
-    // البحث في العنوان أو المحتوى
     $documents = Document::query()
         ->when(!empty($words), function ($query) use ($words) {
             $query->where(function ($q) use ($words) {
@@ -85,7 +125,7 @@ public function search(Request $request){
         ->get();
   
     $endTime = microtime(true);
-    $searchTime = round($endTime - $startTime, 4); // الزمن بالثواني
+    $searchTime = round($endTime - $startTime, 4); 
 
     OperationTime::create([
         'operation' => 'search',
@@ -97,10 +137,9 @@ public function search(Request $request){
 
 
 
-//3
-private function detectCategory($text){
 
-    $categories = [
+    private function detectCategory($text){
+        $categories = [
         'CV'=>['profile','contact','skills'],
         'Education' => ['school', 'student', 'teacher', 'university', 'curriculum', 'learning', 'classroom'],
         'Health' => ['doctor', 'medicine', 'disease', 'hospital', 'treatment', 'health', 'clinic'],
@@ -295,164 +334,28 @@ private function detectCategory($text){
         'chart', 'single', 'tour', 'performance', 'soundtrack', 'studio',
         'music video', 'award', 'Grammy'],
         
-    ];
+        ];
 
-    // Convert text to lowercase for case-insensitive matching
-    $text = strtolower($text);
+        // Convert text to lowercase for case-insensitive matching
+        $text = strtolower($text);
 
-    
-
-    foreach ($categories as $category => $keywords) {
-        foreach ($keywords as $keyword) {
-            $smal=strtolower($keyword);
-            if (str_contains($text, $smal)) {
-                return $category;
-            }
-        }
-    }
-    
-    return 'Uncategorized';
-}
-
-
-
-
-    
-    
-    
-
-    
-
-
-
-public function uploadForm()
-    {
-        return view('Document.upload');
-    }
-
-public function statistics(){
-
-        $totalDocuments = Document::count();
-        $totalSizeBytes = Document::sum('size');
-        $totalSizeMB = round($totalSizeBytes / (1024 * 1024), 2);
-         $averageSearchTime = OperationTime::where('operation', 'search')->avg('time');
-         $averageSortTime = OperationTime::where('operation', 'sort')->avg('time');
-         $averageClassifyTime = OperationTime::where('operation', 'classify')->avg('time');
-
-    return view('document.list', compact(
-        'totalDocuments', 
-        'totalSizeMB', 
-        'averageSearchTime', 
-        'averageSortTime', 
-        'averageClassifyTime'
-    ));
-        // return view('document.statistics', compact('totalDocuments', 'totalSizeMB'));
-    }
-
-
-public function upload(Request $request)
-    {
-        // $image =$request->file('file');
-        // storage::disk('uploads')->put(
-        //     "file/newFile",file_get_contents($image)
-        // );
-        // $fileName=$image->getClientOriginalExtension();
-        
-
-        $request->validate([
-            'file' => 'required|mimes:pdf,docx|max:20480',
-            
-        ]);
-        $startTime = microtime(true);
-
-        $file = $request->file('file');
-        $path = $file->store('documents');
-//new code with doc
-    $extension = $file->getClientOriginalExtension();
-    $text = '';
-
-    if ($extension === 'pdf') {
-        $parser = new Parser();
-        $pdf = $parser->parseFile(storage_path("app/{$path}"));
-        $text = $pdf->getText();
-        try {
-            $parser = new Parser();
-            $pdf = $parser->parseFile(storage_path("app/{$path}"));
-            $text = $pdf->getText();
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['file' => 'حدث خطأ أثناء قراءة ملف PDF: ' . $e->getMessage()]);
-        }
-    } elseif ($extension === 'docx') {
-        // $phpWord = IOFactory::load(storage_path("app/{$path}"));
-        // $text = '';
-        // foreach ($phpWord->getSections() as $section) {
-        //     foreach ($section->getElements() as $element) {
-        //         if (method_exists($element, 'getText')) {
-        //             // $text .= $element->getText() . "\n";
-        //             $text .=$element->getText()."\n";
-        //         }
-        //     }
-        try {
-            $phpWord = IOFactory::load(storage_path("app/{$path}"));
-            $text = '';
-            foreach ($phpWord->getSections() as $section) {
-                foreach ($section->getElements() as $element) {
-                    if (method_exists($element, 'getText')) {
-                        $text .= $element->getText() . "\n";
-                    }
+        foreach ($categories as $category => $keywords) {
+            foreach ($keywords as $keyword) {
+                $smal=strtolower($keyword);
+                if (str_contains($text, $smal)) {
+                    return $category;
                 }
             }
-            if (empty($text)) {
-                return redirect()->back()->withErrors(['file' => 'لم يتم العثور على نص في ملف Word']);
-            }
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['file' => 'حدث خطأ أثناء قراءة ملف Word: ' . $e->getMessage()]);
-   
+        }   
+        return 'Uncategorized';
         }
-    }
 
-    if (empty($text)) {
-        return redirect()->back()->withErrors(['file' => 'تعذر استخراج النص من الملف.']);
-    }
-//new code with doc
-        // استخراج النص من PDF
-        // $parser = new Parser();
-        // $pdf = $parser->parseFile(storage_path("app/{$path}"));
-        // $text = $pdf->getText();
-        //للتصنيف
-        $category = $this->detectCategory($text); 
-        // استخراج العنوان (مثلاً أول سطر)
-        $lines = preg_split("/\r\n|\n|\r/", trim($text));
-        $title = $lines[0] ?? 'unknown';
 
-        // حفظ في قاعدة البيانات
-        $doc= Document::query()->create([
-            'title'=>$title,
-            'content' => $text,
-            'file_path' => $path,
-            'size' => $file->getSize(),
-            'category'=>$category
-        ]);
-        $endTime = microtime(true);
-    $searchTime = round($endTime - $startTime, 4); // per sce
 
-    OperationTime::create([
-        'operation' => 'classify',
-        'time' => $searchTime,
-    ]);
-
-        
-      
-
-        return redirect()->back()->with('success', 'تم رفع الملف وتحليله بنجاح');
-    }
 public function list(Request $request){
-    // جلب جميع المستندات مرتبة حسب تاريخ الإنشاء تنازلياً (الأحدث أولاً)
-    // $documents = Document::orderBy('created_at', 'desc')->get();
-
     $startTime = microtime(true);
 
-    $sortOrder = $request->get('sort', 'asc'); // 'asc' هو الوضع الافتراضي
+    $sortOrder = $request->get('sort', 'asc'); // 'asc'   
     $documents = Document::orderBy('title', $sortOrder)->get();
 
     $endTime = microtime(true);
@@ -464,21 +367,13 @@ public function list(Request $request){
     ]);
 
 
-
+         //for statistics
         $totalDocuments = Document::count();
         $totalSizeBytes = Document::sum('size');
         $totalSizeMB = round($totalSizeBytes / (1024 * 1024), 2);
          $averageSearchTime = OperationTime::where('operation', 'search')->avg('time');
          $averageSortTime = OperationTime::where('operation', 'sort')->avg('time');
          $averageClassifyTime = OperationTime::where('operation', 'classify')->avg('time');
-
-    // return view('document.list', compact(
-    //     'totalDocuments', 
-    //     'totalSizeMB', 
-    //     'averageSearchTime', 
-    //     'averageSortTime', 
-    //     'averageClassifyTime'
-    // ));
 
     return view('Document.list', compact(
         'documents', 'sortOrder',
@@ -488,8 +383,6 @@ public function list(Request $request){
         'averageSortTime', 
         'averageClassifyTime'
     ));
-
-    // return view('Document.list', compact('documents'));
 }
 
 }
