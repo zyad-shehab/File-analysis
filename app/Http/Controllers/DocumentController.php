@@ -138,15 +138,15 @@ public function search(Request $request){
 
 
 
-    private function detectCategory($text){
+private function detectCategory($text){
         $categories = [
-        'CV'=>['profile','contact','skills'],
         'Education' => ['school', 'student', 'teacher', 'university', 'curriculum', 'learning', 'classroom'],
         'Health' => ['doctor', 'medicine', 'disease', 'hospital', 'treatment', 'health', 'clinic'],
         'Politics' => ['election', 'government', 'policy', 'president', 'congress', 'minister', 'vote'],
         'Economy' => ['economy', 'finance', 'money', 'trade', 'market', 'investment', 'bank'],
         'Technology' => ['Java', 'PHP', 'SQL',
-        'HTML', 'CSS', 'JavaScript','computer', 'software', 'AI', 'data', 'technology', 'application', 'programming'],
+        'computer', 'software', 'AI', 'data', 'technology', 'application', 'programming'],
+        'Web'=>['css','web','HTML', 'CSS', 'JavaScript'],
         'Environment' => ['climate', 'pollution', 'environment', 'sustainability', 'recycling', 'emissions'],
         'Health_Nutrition' => [
         'nutrition', 'diet', 'vitamins', 'minerals', 'healthy eating', 'balanced diet',
@@ -291,7 +291,6 @@ public function search(Request $request){
         'seed funding', 'exit strategy', 'valuation', 'pivot', 'lean startup',
         'cash flow', 'marketing', 'branding', 'sales', 'negotiation', 'leadership',
         'team building', 'product development', 'growth hacking'],
-
         'Business_Marketing' => ['marketing', 'advertising', 'SEO', 'content marketing', 'social media',
         'branding', 'campaign', 'email marketing', 'influencer', 'analytics',
         'conversion rate', 'lead generation', 'PPC', 'Google Ads', 'Facebook Ads',
@@ -299,7 +298,6 @@ public function search(Request $request){
         'digital marketing', 'affiliate marketing', 'brand awareness',
         'marketing strategy', 'keyword research', 'copywriting', 'blogging',
         'video marketing', 'viral marketing', 'engagement', 'CRM', 'growth marketing'],
-
         'Finance_Investment' => ['investment', 'stocks', 'bonds', 'mutual funds', 'portfolio', 'dividend',
         'risk management', 'asset allocation', 'stock market', 'trading',
         'financial analysis', 'valuation', 'capital gains', 'hedge fund',
@@ -332,8 +330,7 @@ public function search(Request $request){
         'genre', 'pop', 'rock', 'hip hop', 'jazz', 'classical', 'electronic',
         'instrument', 'lyric', 'composer', 'producer', 'record label',
         'chart', 'single', 'tour', 'performance', 'soundtrack', 'studio',
-        'music video', 'award', 'Grammy'],
-        
+        'music video', 'award', 'Grammy'],        
         ];
 
         // Convert text to lowercase for case-insensitive matching
@@ -383,6 +380,14 @@ public function list(Request $request){
         'averageSortTime', 
         'averageClassifyTime'
     ));
+}
+
+public function destroy($id) {
+    $document = Document::findOrFail($id);
+    Document::query()->find($id)->delete();
+       
+    return redirect()->route('documents.list')->with('success', 'تم حذف العنصر بنجاح!');
+
 }
 
 }

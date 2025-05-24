@@ -1,55 +1,3 @@
-{{-- <!DOCTYPE html>
-<html lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <title>قائمة المستندات</title>
-</head>
-<body>
-    <h2>قائمة المستندات المحللة</h2>
-    <a href="{{ route('documents.form') }}">رفع مستند جديد</a>
-    <table border="1" cellpadding="10" cellspacing="0" style="margin-top:20px;">
-        <thead>
-            <tr>
-                <th>العنوان</th>
-                <th>الحجم (بايت)</th>
-                <th>تاريخ الرفع</th>
-                <th>رابط التنزيل</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($documents as $doc)
-                <tr>
-                    <td>{{ $doc->title }}</td>
-                    <td>{{ number_format($doc->size) }}</td>
-                    <td>{{ $doc->created_at->format('Y-m-d H:i') }}</td>
-                    <td>
-                        <a href="{{ asset('storage/' . $doc->file_path) }}" target="_blank">تحميل</a>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="4">لا توجد مستندات مرفوعة بعد.</td>
-                </tr>
-            @endforelse
-
-            <div class="mb-3">
-                <form method="GET" action="{{ route('documents.list') }}">
-                    <label for="sort">ترتيب حسب العنوان:</label>
-                    <select name="sort" onchange="this.form.submit()">
-                        {{-- <option value="asc" {{ $sortOrder == 'asc' ? 'selected' : '' }}>تصاعدي (أ-ي)</option>
-                        <option value="desc" {{ $sortOrder == 'desc' ? 'selected' : '' }}>تنازلي (ي-أ)</option> --}}
-                    {{-- </select>
-                </form>
-            </div>
-            
-        </tbody>
-    </table>
-</body>
-</html> --}} 
-
-
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -57,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>قائمة المستندات</title>
     @include('includes.bootstrap')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
@@ -140,6 +89,7 @@
                         <th>تاريخ الرفع</th>
                         <th>رابط التنزيل</th>
                         <th>التصنيف</th>
+                        <th>حذف الملف</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -156,6 +106,14 @@
                                 </a>
                             </td>
                             <td>{{ $doc->category ?? 'غير مصنف' }}</td>
+                            <td>
+                                {{-- <a href="{{ route('documents.destroy', $doc->id) }}">حذف</a> --}}
+                                <form action="{{ route('documents.destroy', $doc->id) }}" method="POST" class="delete-form" style="display:inline;">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger btn-sm">حذف</button>
+                                </form>
+                            </td>
                         </tr>
                     @empty
                         <tr>
@@ -199,5 +157,29 @@
         </div>
     </div>
 </body>
-</html>
 
+<script>
+
+$(document).ready(function() {
+    $('.delete-form').on('submit', function(e) {
+        e.preventDefault(); // منع الإرسال الافتراضي للنموذج
+        var form = this; // الإشارة إلى النموذج الحالي
+
+        Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: "لن تتمكن من التراجع عن هذا!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'نعم، احذف!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit(); // إذا أكد المستخدم، قم بإرسال النموذج يدويًا
+            }
+        });
+    });
+});
+</script>
+
+</html>

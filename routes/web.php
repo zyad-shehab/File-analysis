@@ -22,6 +22,7 @@ use App\Http\Controllers\HomePageController;
 
 
 
+Route::delete('/destroy/{id}', [DocumentController::class, 'destroy'])->name('documents.destroy');
 
 Route::get('uploadform', [DocumentController::class, 'uploadForm'])->name('documents.form');
 Route::post('upload', [DocumentController::class, 'upload'])->name('documents.upload');

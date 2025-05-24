@@ -1,4 +1,3 @@
-<!-- resources/views/upload.blade.php -->
 @include('includes.bootstrap')    
 
 <!DOCTYPE html>
