@@ -131,7 +131,7 @@ public function search(Request $request){
         'operation' => 'search',
         'time' => $searchTime,
     ]);
-    return view('document.search_results', compact('documents', 'keyword'));
+    return view('Document.search_results', compact('documents', 'keyword'));
     }
 
 
@@ -386,7 +386,7 @@ public function destroy($id) {
     $document = Document::findOrFail($id);
     Document::query()->find($id)->delete();
        
-    return redirect()->route('documents.list')->with('success', 'تم حذف العنصر بنجاح!');
+    return redirect()->route('Documents.list')->with('success', 'تم حذف العنصر بنجاح!');
 
 }
 
