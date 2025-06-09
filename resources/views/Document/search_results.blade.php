@@ -137,5 +137,8 @@
             </div>
         @endforelse
     </div>
+    <div class="d-flex justify-content-center">
+            {{ $documents->links('pagination::bootstrap-5') }}
+    </div>
 </body>
 </html>
