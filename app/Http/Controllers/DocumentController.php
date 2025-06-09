@@ -122,7 +122,7 @@ public function search(Request $request){
                 }
             });
         })
-        ->get();
+        ->paginate(5);;
   
     $endTime = microtime(true);
     $searchTime = round($endTime - $startTime, 4); 
@@ -353,7 +353,7 @@ public function list(Request $request){
     $startTime = microtime(true);
 
     $sortOrder = $request->get('sort', 'asc'); // 'asc'   
-    $documents = Document::orderBy('title', $sortOrder)->get();
+    $documents = Document::orderBy('title', $sortOrder)->paginate(5);;
 
     $endTime = microtime(true);
     $searchTime = round($endTime - $startTime, 4); // per sce
@@ -386,7 +386,7 @@ public function destroy($id) {
     $document = Document::findOrFail($id);
     Document::query()->find($id)->delete();
        
-    return redirect()->route('Documents.list')->with('success', 'تم حذف العنصر بنجاح!');
+    return redirect()->back()->with('success', 'تم حذف العنصر بنجاح!');
 
 }
 
