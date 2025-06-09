@@ -122,6 +122,9 @@
                     @endforelse
                 </tbody>
             </table>
+            <div class="d-flex justify-content-center">
+                {{ $documents->links('pagination::bootstrap-5') }}
+            </div>
         </div>
         <div class="stats-container mt-5">
             <h4 class="text-center mb-4">📊 إحصائيات المستندات</h4>
