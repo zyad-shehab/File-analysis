@@ -82,6 +82,12 @@
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle text-center">
+                @if(session('success'))
+                <div class="alert alert-danger">
+                    <i class="fas fa-check-circle"></i>
+                    {{ session('success') }}
+                </div>
+             @endif
                 <thead>
                     <tr>
                         <th>العنوان</th>
