@@ -202,7 +202,8 @@
                     <p>أو</p>
                     <button type="button" class="btn btn-outline-primary">اختر ملف</button>
                     {{-- <input type="file" name="file" id="file-input" class="custom-file-input" accept=".pdf" required> --}}
-                    <input type="file" name="file" id="file-input" class="custom-file-input" accept=".pdf,.docx" required>
+                    <input type="file" name="file[]" id="file-input" class="custom-file-input" accept=".pdf,.docx" required multiple>
+                    
 
                     <div class="file-name"></div>
                 </label>

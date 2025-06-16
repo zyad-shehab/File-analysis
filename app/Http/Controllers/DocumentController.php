@@ -22,33 +22,86 @@ public function uploadForm()
 
 
 public function upload(Request $request){
+    set_time_limit(0);
+
         $request->validate([
-            'file' => 'required|mimes:pdf,docx|max:20480',
+            'file.*' => 'required|mimes:pdf,docx|max:20480',
             
         ]);
         $startTime = microtime(true);
 
-        $file = $request->file('file');
-        $path = $file->store('documents');
-    //new code with docx && pdf
+    //     $file = $request->file('file');
+    //     $path = $file->store('documents');
+    // //new code with docx && pdf
+    // $extension = $file->getClientOriginalExtension();
+    // $text = '';
+
+    // if ($extension === 'pdf') {
+    //     $parser = new Parser();
+    //     $pdf = $parser->parseFile(storage_path("app/{$path}"));
+    //     $text = $pdf->getText();
+    //     try {
+    //         $parser = new Parser();
+    //         $pdf = $parser->parseFile(storage_path("app/{$path}"));
+    //         $text = $pdf->getText();
+    //     } catch (\Exception $e) {
+    //         return redirect()->back()->withErrors(['file' => 'حدث خطأ أثناء قراءة ملف PDF: ' . $e->getMessage()]);
+    //     }
+    // } elseif ($extension === 'docx') {
+    //     try {
+    //         $phpWord = IOFactory::load(storage_path("app/{$path}"));
+    //         $text = '';
+    //         foreach ($phpWord->getSections() as $section) {
+    //             foreach ($section->getElements() as $element) {
+    //                 if (method_exists($element, 'getText')) {
+    //                     $text .= $element->getText() . "\n";
+    //                 }
+    //             }
+    //         }
+    //         if (empty($text)) {
+    //             return redirect()->back()->withErrors(['file' => 'لم يتم العثور على نص في ملف Word']);
+    //         }
+    //     } catch (\Exception $e) {
+    //         return redirect()->back()->withErrors(['file' => 'حدث خطأ أثناء قراءة ملف Word: ' . $e->getMessage()]);
+    //     }}
+    // if (empty($text)) {
+    //     return redirect()->back()->withErrors(['file' => 'تعذر استخراج النص من الملف.']);
+    // }
+    //     //للتصنيف
+    //     $category = $this->detectCategory($text); 
+    //     // استخراج العنوان ( أول سطر)
+    //     $lines = preg_split("/\r\n|\n|\r/", trim($text));
+    //     $title = $lines[0] ?? 'unknown';
+
+    //     // حفظ في قاعدة البيانات
+    //     $doc= Document::query()->create([
+    //         'title'=>$title,
+    //         'content' => $text,
+    //         'file_path' => $path,
+    //         'size' => $file->getSize(),
+    //         'category'=>$category
+    //     ]);
+    //     $endTime = microtime(true);
+    //     $searchTime = round($endTime - $startTime, 4); // per sce
+
+    // OperationTime::create([
+    //     'operation' => 'classify',
+    //     'time' => $searchTime,
+    // ]);
+    foreach ($request->file('file') as $file) {
+    $startTime = microtime(true);
+
+    $path = $file->store('documents');
     $extension = $file->getClientOriginalExtension();
     $text = '';
 
-    if ($extension === 'pdf') {
-        $parser = new Parser();
-        $pdf = $parser->parseFile(storage_path("app/{$path}"));
-        $text = $pdf->getText();
-        try {
-            $parser = new Parser();
+    try {
+        if ($extension === 'pdf') {
+            $parser = new \Smalot\PdfParser\Parser();
             $pdf = $parser->parseFile(storage_path("app/{$path}"));
             $text = $pdf->getText();
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['file' => 'حدث خطأ أثناء قراءة ملف PDF: ' . $e->getMessage()]);
-        }
-    } elseif ($extension === 'docx') {
-        try {
-            $phpWord = IOFactory::load(storage_path("app/{$path}"));
-            $text = '';
+        } elseif ($extension === 'docx') {
+            $phpWord = \PhpOffice\PhpWord\IOFactory::load(storage_path("app/{$path}"));
             foreach ($phpWord->getSections() as $section) {
                 foreach ($section->getElements() as $element) {
                     if (method_exists($element, 'getText')) {
@@ -56,36 +109,36 @@ public function upload(Request $request){
                     }
                 }
             }
-            if (empty($text)) {
-                return redirect()->back()->withErrors(['file' => 'لم يتم العثور على نص في ملف Word']);
-            }
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['file' => 'حدث خطأ أثناء قراءة ملف Word: ' . $e->getMessage()]);
-        }}
-    if (empty($text)) {
-        return redirect()->back()->withErrors(['file' => 'تعذر استخراج النص من الملف.']);
+        }
+    } catch (\Exception $e) {
+        return redirect()->back()->withErrors(['file' => 'حدث خطأ أثناء معالجة الملف: ' . $e->getMessage()]);
     }
-        //للتصنيف
-        $category = $this->detectCategory($text); 
-        // استخراج العنوان ( أول سطر)
-        $lines = preg_split("/\r\n|\n|\r/", trim($text));
-        $title = $lines[0] ?? 'unknown';
 
-        // حفظ في قاعدة البيانات
-        $doc= Document::query()->create([
-            'title'=>$title,
-            'content' => $text,
-            'file_path' => $path,
-            'size' => $file->getSize(),
-            'category'=>$category
-        ]);
-        $endTime = microtime(true);
-        $searchTime = round($endTime - $startTime, 4); // per sce
+    if (empty($text)) {
+        continue; // تخطى الملف إذا لم يتم استخراج نص
+    }
+
+    $category = $this->detectCategory($text);
+    $lines = preg_split("/\r\n|\n|\r/", trim($text));
+    $title = $lines[0] ?? 'unknown';
+
+    Document::create([
+        'title' => $title,
+        'content' => $text,
+        'file_path' => $path,
+        'size' => $file->getSize(),
+        'category' => $category
+    ]);
+
+    $endTime = microtime(true);
+    $searchTime = round($endTime - $startTime, 4);
 
     OperationTime::create([
         'operation' => 'classify',
         'time' => $searchTime,
     ]);
+}
+
         return redirect()->back()->with('success', 'تم رفع الملف وتحليله بنجاح');
     }
 
@@ -122,7 +175,7 @@ public function search(Request $request){
                 }
             });
         })
-        ->paginate(5);;
+        ->paginate(5)->appends($request->query());
   
     $endTime = microtime(true);
     $searchTime = round($endTime - $startTime, 4); 
@@ -353,7 +406,7 @@ public function list(Request $request){
     $startTime = microtime(true);
 
     $sortOrder = $request->get('sort', 'asc'); // 'asc'   
-    $documents = Document::orderBy('title', $sortOrder)->paginate(5);;
+    $documents = Document::orderBy('title', $sortOrder)->paginate(5)->appends($request->query());;
 
     $endTime = microtime(true);
     $searchTime = round($endTime - $startTime, 4); // per sce
