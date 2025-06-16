@@ -131,6 +131,7 @@
             <div class="d-flex justify-content-center">
                 {{ $documents->links('pagination::bootstrap-5') }}
             </div>
+            <a class="btn btn-danger" href="{{route('logout')}}">تسجيل الخروج </a>
         </div>
         <div class="stats-container mt-5">
             <h4 class="text-center mb-4">📊 إحصائيات المستندات</h4>
